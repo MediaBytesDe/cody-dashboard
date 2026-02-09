@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cody-dashboard-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cody
+      POSTGRES_PASSWORD: cody
+      POSTGRES_DB: cody_dashboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
