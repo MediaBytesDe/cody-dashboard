@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     priority: body.priority || "medium",
     projectId: body.projectId || null,
     dueDate: body.dueDate ? new Date(body.dueDate) : null,
+    startDate: body.startDate ? new Date(body.startDate) : null,
+    recurringPattern: body.recurringPattern || null,
   }).returning();
   await logActivity("created", "task", task.id, task.title);
   return NextResponse.json(task, { status: 201 });
@@ -31,12 +33,16 @@ export async function PATCH(req: NextRequest) {
   const { id, ...updates } = body;
   if (updates.dueDate) updates.dueDate = new Date(updates.dueDate);
   if (updates.dueDate === null) updates.dueDate = null;
+  if (updates.startDate) updates.startDate = new Date(updates.startDate);
+  if (updates.startDate === null) updates.startDate = null;
 
   const [old] = await db.select().from(tasks).where(eq(tasks.id, id));
   const [task] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
 
   if (updates.status && old && updates.status !== old.status) {
     await logActivity("status_changed", "task", task.id, task.title, `${old.status} → ${updates.status}`);
+  } else if (updates.pinned !== undefined) {
+    await logActivity("updated", "task", task.id, task.title, updates.pinned ? "Angepinnt" : "Losgelöst");
   } else {
     await logActivity("updated", "task", task.id, task.title);
   }

@@ -13,9 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import {
   ArrowLeft, Save, Trash2, MessageSquare, Tag as TagIcon,
-  CalendarDays, Send, X, Plus,
+  CalendarDays, Send, X, Plus, Pin, PinOff, Repeat,
 } from "lucide-react";
 import { format, isPast } from "date-fns";
+import { toast } from "sonner";
 
 type TaskWithRelations = Task & {
   project: Project | null;
@@ -39,6 +40,8 @@ export function TaskDetail({ task, projects, allTags }: Props) {
     priority: task.priority,
     projectId: task.projectId || "",
     dueDate: task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : "",
+    startDate: task.startDate ? format(new Date(task.startDate), "yyyy-MM-dd") : "",
+    recurringPattern: task.recurringPattern || "",
   });
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -51,10 +54,28 @@ export function TaskDetail({ task, projects, allTags }: Props) {
     await fetch("/api/tasks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, ...form, projectId: form.projectId || null, dueDate: form.dueDate || null }),
+      body: JSON.stringify({
+        id: task.id,
+        ...form,
+        projectId: form.projectId || null,
+        dueDate: form.dueDate || null,
+        startDate: form.startDate || null,
+        recurringPattern: form.recurringPattern || null,
+      }),
     });
     setEditing(false);
     setSubmitting(false);
+    toast.success("Aufgabe gespeichert");
+    router.refresh();
+  }
+
+  async function togglePin() {
+    await fetch("/api/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: task.id, pinned: !task.pinned }),
+    });
+    toast.success(task.pinned ? "Task losgelöst" : "Task angepinnt");
     router.refresh();
   }
 
@@ -65,6 +86,7 @@ export function TaskDetail({ task, projects, allTags }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: task.id }),
     });
+    toast.success("Aufgabe gelöscht");
     router.push("/tasks");
   }
 
@@ -77,6 +99,7 @@ export function TaskDetail({ task, projects, allTags }: Props) {
       body: JSON.stringify({ taskId: task.id, content: newComment }),
     });
     setNewComment("");
+    toast.success("Kommentar hinzugefügt");
     router.refresh();
   }
 
@@ -87,6 +110,7 @@ export function TaskDetail({ task, projects, allTags }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId: task.id, tagId }),
     });
+    toast.success(hasTag ? "Tag entfernt" : "Tag hinzugefügt");
     router.refresh();
   }
 
@@ -101,10 +125,17 @@ export function TaskDetail({ task, projects, allTags }: Props) {
           {editing ? (
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-xl font-bold" />
           ) : (
-            <h1 className="text-2xl font-bold">{task.title}</h1>
+            <div className="flex items-center gap-2">
+              {task.pinned && <Pin className="h-4 w-4 text-yellow-500" />}
+              {task.recurringPattern && <Badge variant="secondary" className="text-xs"><Repeat className="h-3 w-3 mr-1" />{task.recurringPattern}</Badge>}
+              <h1 className="text-2xl font-bold">{task.title}</h1>
+            </div>
           )}
         </div>
         <div className="flex gap-2">
+          <Button variant="ghost" size="icon" onClick={togglePin} title={task.pinned ? "Loslösen" : "Anpinnen"}>
+            {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </Button>
           {editing ? (
             <>
               <Button onClick={saveTask} disabled={submitting}><Save className="h-4 w-4 mr-1" /> Speichern</Button>
@@ -164,7 +195,6 @@ export function TaskDetail({ task, projects, allTags }: Props) {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Properties */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Details</CardTitle>
@@ -182,9 +212,7 @@ export function TaskDetail({ task, projects, allTags }: Props) {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="mt-1">
-                    <Badge variant="secondary" className="capitalize">{task.status.replace("_", " ")}</Badge>
-                  </div>
+                  <div className="mt-1"><Badge variant="secondary" className="capitalize">{task.status.replace("_", " ")}</Badge></div>
                 )}
               </div>
               <div>
@@ -217,9 +245,15 @@ export function TaskDetail({ task, projects, allTags }: Props) {
                 )}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" /> Fällig
-                </label>
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Startdatum</label>
+                {editing ? (
+                  <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="mt-1" />
+                ) : (
+                  <p className="text-sm mt-1">{task.startDate ? format(new Date(task.startDate), "dd.MM.yyyy") : "—"}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Fällig</label>
                 {editing ? (
                   <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="mt-1" />
                 ) : (
@@ -227,6 +261,22 @@ export function TaskDetail({ task, projects, allTags }: Props) {
                     {task.dueDate ? format(new Date(task.dueDate), "dd.MM.yyyy") : "—"}
                     {isOverdue && " (Überfällig!)"}
                   </p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><Repeat className="h-3 w-3" /> Wiederkehrend</label>
+                {editing ? (
+                  <Select value={form.recurringPattern || "none"} onValueChange={(v) => setForm({ ...form, recurringPattern: v === "none" ? "" : v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nicht wiederkehrend</SelectItem>
+                      <SelectItem value="daily">Täglich</SelectItem>
+                      <SelectItem value="weekly">Wöchentlich</SelectItem>
+                      <SelectItem value="monthly">Monatlich</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm mt-1 capitalize">{task.recurringPattern || "—"}</p>
                 )}
               </div>
               <div className="text-xs text-muted-foreground pt-2 border-t">
@@ -238,9 +288,7 @@ export function TaskDetail({ task, projects, allTags }: Props) {
           {/* Tags */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TagIcon className="h-4 w-4" /> Tags
-              </CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><TagIcon className="h-4 w-4" /> Tags</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">

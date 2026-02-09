@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const taskStatusEnum = pgEnum("task_status", [
@@ -19,6 +19,7 @@ export const projects = pgTable("projects", {
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   tasks: many(tasks),
+  notes: many(notes),
 }));
 
 // ── Tasks ─────────────────────────────────────────────────
@@ -33,12 +34,17 @@ export const tasks = pgTable("tasks", {
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   dueDate: timestamp("due_date"),
+  startDate: timestamp("start_date"),
+  pinned: boolean("pinned").default(false).notNull(),
+  recurringPattern: text("recurring_pattern"), // "daily" | "weekly" | "monthly" | null
+  recurringSourceId: uuid("recurring_source_id"),
 });
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
   project: one(projects, { fields: [tasks.projectId], references: [projects.id] }),
   taskTags: many(taskTags),
   comments: many(comments),
+  notes: many(notes),
 }));
 
 // ── Tags ──────────────────────────────────────────────────
@@ -78,11 +84,27 @@ export const commentsRelations = relations(comments, ({ one }) => ({
   task: one(tasks, { fields: [comments.taskId], references: [tasks.id] }),
 }));
 
+// ── Notes ─────────────────────────────────────────────────
+export const notes = pgTable("notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  content: text("content"),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notesRelations = relations(notes, ({ one }) => ({
+  project: one(projects, { fields: [notes.projectId], references: [projects.id] }),
+  task: one(tasks, { fields: [notes.taskId], references: [tasks.id] }),
+}));
+
 // ── Activity Log ──────────────────────────────────────────
 export const activityLog = pgTable("activity_log", {
   id: uuid("id").defaultRandom().primaryKey(),
-  action: text("action").notNull(), // created, updated, deleted, status_changed, comment_added, tag_added, tag_removed
-  entityType: text("entity_type").notNull(), // task, project, tag
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
   entityId: uuid("entity_id").notNull(),
   entityTitle: text("entity_title"),
   details: text("details"),
@@ -99,4 +121,6 @@ export type NewTag = typeof tags.$inferInsert;
 export type TaskTag = typeof taskTags.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+export type Note = typeof notes.$inferSelect;
+export type NewNote = typeof notes.$inferInsert;
 export type ActivityLogEntry = typeof activityLog.$inferSelect;

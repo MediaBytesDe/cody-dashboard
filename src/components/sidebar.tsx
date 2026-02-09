@@ -11,6 +11,8 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeft,
+  FileText,
+  GanttChart,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
@@ -19,7 +21,9 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Aufgaben", href: "/tasks", icon: ListTodo },
   { label: "Kanban Board", href: "/tasks/board", icon: Kanban },
+  { label: "Timeline", href: "/tasks/timeline", icon: GanttChart },
   { label: "Projekte", href: "/projects", icon: FolderKanban },
+  { label: "Notizen", href: "/notes", icon: FileText },
   { label: "Einstellungen", href: "/settings", icon: Settings },
 ];
 
