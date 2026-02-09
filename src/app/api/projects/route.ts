@@ -4,9 +4,21 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const sortBy = searchParams.get("sort") || "createdAt";
+  const order = searchParams.get("order") || "desc";
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+  const offset = (page - 1) * limit;
+
   const all = await db.query.projects.findMany({
-    orderBy: (p, { desc }) => [desc(p.createdAt)],
+    orderBy: (p, { desc: d, asc: a }) => {
+      const dir = order === "asc" ? a : d;
+      return [dir(sortBy === "name" ? p.name : p.createdAt)];
+    },
+    limit,
+    offset,
   });
   return NextResponse.json(all);
 }

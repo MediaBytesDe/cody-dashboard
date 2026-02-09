@@ -5,12 +5,14 @@ import { Sidebar } from "@/components/sidebar";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Toaster } from "sonner";
+import { CommandPalette } from "@/components/command-palette";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Cody Dashboard",
-  description: "Aufgaben & Projekte Tracking",
+  title: "Cody Dashboard — Tasks & Projekte",
+  description: "Aufgaben & Projekte Tracking von Cody",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <Toaster richColors position="bottom-right" />
         <KeyboardShortcuts />
+        <CommandPalette />
       </body>
     </html>
   );

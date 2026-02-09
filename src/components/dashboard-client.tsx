@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { DashboardWidgets } from "./dashboard-widgets";
+import { motion } from "framer-motion";
 
 interface Props {
   tasks: Task[];
@@ -85,6 +87,9 @@ export function DashboardClient({ tasks: allTasks, projects: allProjects, stats,
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Übersicht über deine Aufgaben und Projekte</p>
       </div>
+
+      {/* Widgets */}
+      <DashboardWidgets />
 
       {/* Quick Action */}
       <Card>

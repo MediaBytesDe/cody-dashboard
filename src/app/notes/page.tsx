@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, FileText, Save, FolderKanban, ListTodo, Eye, Edit3 } from "lucide-react";
+import { MarkdownEditor } from "@/components/markdown-editor";
+import { EmptyState } from "@/components/empty-state";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -123,7 +125,7 @@ export default function NotesPage() {
               </p>
             </div>
           ))}
-          {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Keine Notizen</p>}
+          {notes.length === 0 && <EmptyState type="notes" onAction={createNote} />}
         </div>
       </div>
 
@@ -167,10 +169,9 @@ export default function NotesPage() {
 
             <div className="flex-1 overflow-y-auto p-4">
               {editing ? (
-                <Textarea
+                <MarkdownEditor
                   value={form.content}
-                  onChange={e => setForm({ ...form, content: e.target.value })}
-                  className="min-h-[400px] font-mono text-sm"
+                  onChange={(v) => setForm({ ...form, content: v })}
                   placeholder="Markdown schreiben..."
                 />
               ) : (

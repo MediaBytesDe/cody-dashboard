@@ -4,11 +4,25 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const sortBy = searchParams.get("sort") || "createdAt";
+  const order = searchParams.get("order") || "desc";
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+  const offset = (page - 1) * limit;
+
   const allTasks = await db.query.tasks.findMany({
     with: { taskTags: { with: { tag: true } } },
-    orderBy: (t, { desc }) => [desc(t.createdAt)],
+    orderBy: (t, { desc: d, asc: a }) => {
+      const dir = order === "asc" ? a : d;
+      const col = sortBy === "priority" ? t.priority : sortBy === "title" ? t.title : sortBy === "dueDate" ? t.dueDate : t.createdAt;
+      return [dir(col)];
+    },
+    limit,
+    offset,
   });
+
   return NextResponse.json(allTasks);
 }
 
